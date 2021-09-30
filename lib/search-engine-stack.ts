@@ -2,8 +2,9 @@ import cdk = require('@aws-cdk/core')
 // import route53 = require('@aws-cdk/aws-route53');
 import lambda = require('@aws-cdk/aws-lambda')
 // import apigateway = require('@aws-cdk/aws-apigateway');
-import dynamodb from '@aws-cdk/aws-dynamodb'
+import * as dynamodb from '@aws-cdk/aws-dynamodb'
 import { Bucket, EventType } from '@aws-cdk/aws-s3'
+// import { Bucket } from '@aws-cdk/aws-s3'
 // import { AccountPrincipal, PolicyStatement } from '@aws-cdk/aws-iam';
 import { Queue } from '@aws-cdk/aws-sqs'
 import { join } from 'path'
@@ -73,7 +74,6 @@ export class SearchEngineStack extends cdk.Stack {
         createIndex.addEventSource(new eventsources.S3EventSource(pageBucket, {
             events: [
                 EventType.OBJECT_CREATED,
-                EventType.OBJECT_CREATED_PUT
             ]
         }))
 

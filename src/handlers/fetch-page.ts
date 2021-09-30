@@ -5,6 +5,8 @@ import { load } from 'cheerio'
 
 export const handler: SQSHandler = async(event) => {
 
+    console.log(event)
+
     const Bucket = process.env.BUCKET ?? ''
 
     if (!Bucket) {

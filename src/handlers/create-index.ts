@@ -1,12 +1,17 @@
 import { S3Handler } from 'aws-lambda'
-import { S3 } from 'aws-sdk'
+import { S3, DynamoDB } from 'aws-sdk'
 import { load } from 'cheerio'
 
-export const handler: S3Handler = async(event) => {
+const dynamodb = new DynamoDB({
+    apiVersion: '2012-08-10',
+    region: 'eu-west-1'
+});
 
-    const table = process.env.TABLE ?? ''
+export const handler: S3Handler = async(event): Promise<any> => {
 
-    if (!table) {
+    const TableName = process.env.TABLE ?? ''
+
+    if (!TableName) {
         throw new Error('table must be defined')
     }
 
@@ -32,9 +37,58 @@ export const handler: S3Handler = async(event) => {
             
             if (html) {
                 const $ = load(html)
-                const content = $('body').text()
+                const content = $('body')
+                    .remove('script')
+                    .text()
+
+                const tokenMap = tokenize(content)
+
+                const tokens = Object.keys(tokenMap)
+
+                while(tokens.length > 0) {
+                    const token = tokens.pop() ?? ''
+
+                    await dynamodb.putItem({
+                        TableName,
+                        Item: {
+                            token: {
+                                S: token,
+                            },
+                            source: {
+                                S: Key,
+                            },
+                            count: {
+                                N: tokens[token] ?? 0
+                            },
+                            // locations: {
+                            //     NS: ['2','3','29']
+                            // }
+                        }
+                    }).promise()
+                }
+
+
             }
         }
     }
 
+}
+
+/*
+  remove extra whitespace and return a list of tokens
+*/
+const tokenize = (content: string): { [token: string]: number } => {
+    const obj = {}
+    
+    const tokens = content
+        .replace(/[^\S]+/, ' ')
+        .split(' ')
+        .map(t => t.trim())
+
+    tokens.forEach(t => {
+        obj[t] = obj[t] ?? 0
+        obj[t] = obj[t] + 1
+    })
+
+    return obj
 }
