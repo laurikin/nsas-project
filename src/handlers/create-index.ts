@@ -1,76 +1,88 @@
 import { S3Handler } from 'aws-lambda'
-import { S3, DynamoDB } from 'aws-sdk'
+import { S3 } from 'aws-sdk'
 import { load } from 'cheerio'
 
-const dynamodb = new DynamoDB({
-    apiVersion: '2012-08-10',
-    region: 'eu-west-1'
-});
+// const dynamodb = new DynamoDB({
+//     apiVersion: '2012-08-10',
+//     region: 'eu-west-1'
+// });
 
-export const handler: S3Handler = async(event): Promise<any> => {
+export const handler: S3Handler = async(event) => {
 
-    const TableName = process.env.TABLE ?? ''
+    console.log(JSON.stringify(event, null, 2))
 
-    if (!TableName) {
-        throw new Error('table must be defined')
-    }
+    // const TableName = process.env.TABLE ?? ''
 
-    const objects = event.Records.map(r => ({
-        Key: r.s3.object.key,
+    // if (!TableName) {
+    //     throw new Error('table must be defined')
+    // }
+
+    const obj = event.Records.map(r => ({
+        Key: decodeURIComponent(r.s3.object.key),
         Bucket: r.s3.bucket.name
-    }))
+    }))[0]
 
     const s3 = new S3()
 
-    while(objects.length > 0) {
-        const obj = objects.pop()
+
+    const { Bucket, Key } = obj
+
+    console.log('Key', Key)
+
+    const resp = await s3.getObject({
+        Bucket,
+        Key
+    }).promise()
+    const html = resp.Body?.toString('utf-8')
+
+    const $ = load(html ?? '')
+    $('script').remove()
+    const body = $('body')
+    const content = body.text()
+
+    console.log('content', content)
+
+    const tokenMap = tokenize(content)
+
+    console.log(tokenMap)
+
+            // const tokens = Object.keys(tokenMap)
+
+                // while(tokens.length > 0) {
+                //     const token = tokens.pop() ?? ''
+                    // console.log('token', token)
+                    // console.log('count', tokenMap[token])
+
+                    // try {
+                    //     await dynamodb.updateItem({
+                    //         TableName,
+                    //         Key: {
+                    //             token: {
+                    //                 S: token
+                    //             },
+                    //             source: {
+                    //                 S: Key
+                    //             }
+                    //         },
+                    //         AttributeUpdates: {
+                    //             count: {
+                    //                 Action: 'PUT',
+                    //                 Value: {
+                    //                     N: tokenMap[token]?.toString() ?? '0'
+                    //                 }
+                    //             },
+                    //             // locations: {
+                    //             //     NS: ['2','3','29']
+                    //             // }
+                    //         }
+                    //     }).promise()
+                    // } catch (e) {
+                    //     console.error(e)
+                    //     throw (e)
+                    // }
+                // }
 
 
-        if (obj !== undefined) {
-            const { Bucket, Key } = obj
-
-            const resp = await s3.getObject({
-                Bucket,
-                Key
-            }).promise()
-            const html = resp.Body?.toString()
-            
-            if (html) {
-                const $ = load(html)
-                const content = $('body')
-                    .remove('script')
-                    .text()
-
-                const tokenMap = tokenize(content)
-
-                const tokens = Object.keys(tokenMap)
-
-                while(tokens.length > 0) {
-                    const token = tokens.pop() ?? ''
-
-                    await dynamodb.putItem({
-                        TableName,
-                        Item: {
-                            token: {
-                                S: token,
-                            },
-                            source: {
-                                S: Key,
-                            },
-                            count: {
-                                N: tokens[token] ?? 0
-                            },
-                            // locations: {
-                            //     NS: ['2','3','29']
-                            // }
-                        }
-                    }).promise()
-                }
-
-
-            }
-        }
-    }
 
 }
 
@@ -81,13 +93,16 @@ const tokenize = (content: string): { [token: string]: number } => {
     const obj = {}
     
     const tokens = content
-        .replace(/[^\S]+/, ' ')
+        .replace(/[^a-zA-Z]+/g, ' ')
         .split(' ')
-        .map(t => t.trim())
+        .map(t => t.trim().toLowerCase())
+        .filter(t => t.length > 3)
 
     tokens.forEach(t => {
-        obj[t] = obj[t] ?? 0
-        obj[t] = obj[t] + 1
+        if (t) {
+            const current = obj[t] || 0
+            obj[t] = current + 1
+        }
     })
 
     return obj

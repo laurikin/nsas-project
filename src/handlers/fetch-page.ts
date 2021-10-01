@@ -1,7 +1,6 @@
 import { SQSHandler } from "aws-lambda"
 import { S3 } from 'aws-sdk'
 import fetch from 'node-fetch'
-import { load } from 'cheerio'
 
 export const handler: SQSHandler = async(event) => {
 
@@ -24,15 +23,12 @@ export const handler: SQSHandler = async(event) => {
         const html = await fetch(url)
             .then(r => r.text())
 
-        const $ = load(html)
-        const content = $('body').text()
-
         if (url?.length > 0) {
 
             await s3.putObject({
                 Bucket,
                 Key: encodeURIComponent(url),
-                Body: content
+                Body: html
             }).promise()
 
         }

@@ -19,12 +19,18 @@ export class SearchEngineStack extends cdk.Stack {
                 name: 'token',
                 type: dynamodb.AttributeType.STRING
             },
+            sortKey: {
+                name: 'source',
+                type: dynamodb.AttributeType.STRING
+            },
             billingMode: dynamodb.BillingMode.PAY_PER_REQUEST
         });
 
         const pageBucket = new Bucket(this, 'page-bucket')
 
-        const urlQueue = new Queue(this, 'url-queue')
+        const urlQueue = new Queue(this, 'url-queue', {
+            visibilityTimeout: cdk.Duration.minutes(5)
+        })
 
         const fetchUrls = new lambda.Function(this, 'fetch-urls-lambda', {
             description: 'Fetch URLs from a given rss feed and push to queue',
@@ -42,7 +48,7 @@ export class SearchEngineStack extends cdk.Stack {
 
         const fetchPage = new lambda.Function(this, 'fetch-page-lambda', {
             description: 'Fetches a page from a given url and stores its text content in s3',
-            timeout: cdk.Duration.seconds(20),
+            timeout: cdk.Duration.minutes(5),
             memorySize: 256,
             runtime: lambda.Runtime.NODEJS_14_X,
             code: lambda.Code.fromAsset(join(__dirname, '../src')),
@@ -60,7 +66,7 @@ export class SearchEngineStack extends cdk.Stack {
 
         const createIndex = new lambda.Function(this, 'create-index', {
             description: 'Count words in the downloaded pages and store index in DB',
-            timeout: cdk.Duration.seconds(20),
+            timeout: cdk.Duration.minutes(5),
             memorySize: 256,
             runtime: lambda.Runtime.NODEJS_14_X,
             code: lambda.Code.fromAsset(join(__dirname, '../src')),
@@ -70,6 +76,7 @@ export class SearchEngineStack extends cdk.Stack {
             }
         });
         pageBucket.grantRead(createIndex)
+        indexTable.grantReadWriteData(createIndex)
 
         createIndex.addEventSource(new eventsources.S3EventSource(pageBucket, {
             events: [
