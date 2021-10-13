@@ -1,21 +1,20 @@
 import { S3Handler } from 'aws-lambda'
 import { S3 } from 'aws-sdk'
 import { load } from 'cheerio'
-
-// const dynamodb = new DynamoDB({
-//     apiVersion: '2012-08-10',
-//     region: 'eu-west-1'
-// });
+import { DynamoDB } from 'aws-sdk'
+import { tokenize } from '../tokenize'
+import { tf } from '../tf'
 
 export const handler: S3Handler = async(event) => {
 
     console.log(JSON.stringify(event, null, 2))
 
-    // const TableName = process.env.TABLE ?? ''
+    const dynamodb = new DynamoDB()
+    const TableName = process.env.TABLE ?? ''
 
-    // if (!TableName) {
-    //     throw new Error('table must be defined')
-    // }
+    if (!TableName) {
+        throw new Error('table must be defined')
+    }
 
     const obj = event.Records.map(r => ({
         Key: decodeURIComponent(r.s3.object.key),
@@ -42,68 +41,43 @@ export const handler: S3Handler = async(event) => {
 
     console.log('content', content)
 
-    const tokenMap = tokenize(content)
+    const tokenArr = tokenize(content)
+    const tfs = tf(tokenArr)
 
-    console.log(tokenMap)
+    const tokens = Array.from(tfs.keys())
 
-            // const tokens = Object.keys(tokenMap)
+    while (tokens.length > 0) {
+        const token = tokens.pop() ?? ''
+        console.log('token', token)
+        console.log('count', tfs.get(token))
 
-                // while(tokens.length > 0) {
-                //     const token = tokens.pop() ?? ''
-                    // console.log('token', token)
-                    // console.log('count', tokenMap[token])
-
-                    // try {
-                    //     await dynamodb.updateItem({
-                    //         TableName,
-                    //         Key: {
-                    //             token: {
-                    //                 S: token
-                    //             },
-                    //             source: {
-                    //                 S: Key
-                    //             }
-                    //         },
-                    //         AttributeUpdates: {
-                    //             count: {
-                    //                 Action: 'PUT',
-                    //                 Value: {
-                    //                     N: tokenMap[token]?.toString() ?? '0'
-                    //                 }
-                    //             },
-                    //             // locations: {
-                    //             //     NS: ['2','3','29']
-                    //             // }
-                    //         }
-                    //     }).promise()
-                    // } catch (e) {
-                    //     console.error(e)
-                    //     throw (e)
-                    // }
-                // }
-
-
-
-}
-
-/*
-  remove extra whitespace and return a list of tokens
-*/
-const tokenize = (content: string): { [token: string]: number } => {
-    const obj = {}
-    
-    const tokens = content
-        .replace(/[^a-zA-Z]+/g, ' ')
-        .split(' ')
-        .map(t => t.trim().toLowerCase())
-        .filter(t => t.length > 3)
-
-    tokens.forEach(t => {
-        if (t) {
-            const current = obj[t] || 0
-            obj[t] = current + 1
+        try {
+            await dynamodb.updateItem({
+                TableName,
+                Key: {
+                    token: {
+                        S: token
+                    },
+                    source: {
+                        S: Key
+                    }
+                },
+                AttributeUpdates: {
+                    count: {
+                        Action: 'PUT',
+                        Value: {
+                            N: tfs.get(token)?.toString() ?? '0'
+                        }
+                    }
+                }
+            }).promise()
+        } catch (e) {
+            console.error(e)
+            throw (e)
         }
-    })
+    }
 
-    return obj
+
+
 }
+

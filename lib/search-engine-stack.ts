@@ -1,11 +1,7 @@
 import cdk = require('@aws-cdk/core')
-// import route53 = require('@aws-cdk/aws-route53');
 import lambda = require('@aws-cdk/aws-lambda')
-// import apigateway = require('@aws-cdk/aws-apigateway');
 import * as dynamodb from '@aws-cdk/aws-dynamodb'
 import { Bucket, EventType } from '@aws-cdk/aws-s3'
-// import { Bucket } from '@aws-cdk/aws-s3'
-// import { AccountPrincipal, PolicyStatement } from '@aws-cdk/aws-iam';
 import { Queue } from '@aws-cdk/aws-sqs'
 import { join } from 'path'
 import * as eventsources from '@aws-cdk/aws-lambda-event-sources';
@@ -83,51 +79,5 @@ export class SearchEngineStack extends cdk.Stack {
                 EventType.OBJECT_CREATED,
             ]
         }))
-
-        // const redirect = new lambda.Function(this, 'redirect-lambda', {
-        //     timeout: cdk.Duration.seconds(5),
-        //     memorySize: 256,
-        //     runtime: lambda.Runtime.NODEJS_14_X,
-        //     code: lambda.Code.asset('src'),
-        //     handler: 'handlers/redirect.handler',
-        //     environment: {
-        //         SITE_ID_TABLE: table.tableName
-        //     }
-        // });
-
-        // table.grantReadData(redirect);
-
-        // const api = new apigateway.RestApi(this, 'exit-proxy-api', {
-        //     deployOptions: stageConfig.deployOptions
-        // });
-
-        // const exitToRetailer = api.root.addResource('exitToRetailer');
-        // const lambdaIntegration = new apigateway.LambdaIntegration(redirect);
-        // exitToRetailer.addMethod('GET', lambdaIntegration)
-
-        // const apiDomain = `exit.${stageConfig.domain}`;
-
-        // const domain = new apigateway.CfnDomainName(this, 'domain-name', {
-        //     domainName: apiDomain,
-        //     certificateArn: stageConfig.sslCertificate
-        // });
-
-        // new apigateway.CfnBasePathMapping(this, 'base-path-mapping', {
-        //     domainName: apiDomain,
-        //     restApiId: api.restApiId,
-        //     stage: api.deploymentStage ?
-        //         api.deploymentStage.stageName : 'prod'
-        // });
-
-        // new route53.CfnRecordSet(this, 'record-set', {
-        //     name: apiDomain,
-        //     type: 'A',
-        //     hostedZoneId: `${stageConfig.hostedZoneId}`,
-        //     aliasTarget: {
-        //         dnsName: domain.attrDistributionDomainName,
-        //         hostedZoneId: domain.attrDistributionHostedZoneId
-        //     }
-        // });
-
     }
 }

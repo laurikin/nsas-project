@@ -4,18 +4,30 @@
   "description": "",
   "main": "amazonLinks.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "mocha -r ts-node/register *.test.ts"
   },
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@nlpjs/core": "^4.22.0",
     "aws-sdk": "2.900.0",
     "cheerio": "^1.0.0-rc.10",
+    "data-api-client": "^1.2.0",
+    "natural": "^5.1.1",
     "node-fetch": "2.6.5",
-    "rss-parser": "3.12.0"
+    "rss-parser": "3.12.0",
+    "stemmer": "^2.0.0"
   },
   "devDependencies": {
-    "@types/cheerio": "0.22.30",
-    "@types/node-fetch": "2.5.12"
+    "@types/chai": "^4.2.22",
+    "@types/cheerio": "^0.22.30",
+    "@types/data-api-client": "^1.2.3",
+    "@types/mocha": "^9.0.0",
+    "@types/natural": "^5.1.0",
+    "@types/node-fetch": "2.5.12",
+    "@types/stemmer": "^2.0.0",
+    "chai": "^4.3.4",
+    "mocha": "^9.1.2",
+    "ts-node": "^10.3.0"
   }
 }
