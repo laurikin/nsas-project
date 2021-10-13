@@ -55,10 +55,10 @@ export const handler: S3Handler = async(event) => {
             await dynamodb.updateItem({
                 TableName,
                 Key: {
-                    token: {
+                    keyword: {
                         S: token
                     },
-                    source: {
+                    document: {
                         S: Key
                     }
                 },

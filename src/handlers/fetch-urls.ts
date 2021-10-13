@@ -18,7 +18,9 @@ export const handler: Handler = async({ feedUrl }: { feedUrl: string }) => {
 
     const urls = feed.items
         .filter(item => (item?.link?.length ?? 0) > 0)
-        .map(item => item.link as string).slice(0, 1)
+        .map(item => item.link as string)
+
+    console.log(urls)
 
     while (urls.length > 0) {
 

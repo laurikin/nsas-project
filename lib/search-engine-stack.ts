@@ -12,11 +12,11 @@ export class SearchEngineStack extends cdk.Stack {
 
         const indexTable = new dynamodb.Table(this, 'search-index-table', {
             partitionKey: {
-                name: 'token',
+                name: 'keyword',
                 type: dynamodb.AttributeType.STRING
             },
             sortKey: {
-                name: 'source',
+                name: 'document',
                 type: dynamodb.AttributeType.STRING
             },
             billingMode: dynamodb.BillingMode.PAY_PER_REQUEST
@@ -79,5 +79,20 @@ export class SearchEngineStack extends cdk.Stack {
                 EventType.OBJECT_CREATED,
             ]
         }))
+
+        const search = new lambda.Function(this, 'search', {
+            functionName: 'search-engine_search',
+            description: 'Search the database for keywords and return ranked rersults',
+            timeout: cdk.Duration.seconds(5),
+            memorySize: 256,
+            runtime: lambda.Runtime.NODEJS_14_X,
+            code: lambda.Code.fromAsset(join(__dirname, '../src')),
+            handler: 'handlers/search.handler',
+            environment: {
+                TABLE: indexTable.tableName
+            }
+        });
+
+        indexTable.grantReadData(search)
     }
 }
