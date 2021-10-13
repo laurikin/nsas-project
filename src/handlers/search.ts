@@ -62,7 +62,5 @@ export const handler: Handler<IEvent> = async({ text }) => {
 
     rank.sort((a, b) => b.score - a.score)
 
-    return rank.map(i => {
-        return `${i.doc}: ${i.score}`
-    }).join('\n')
+    return rank.slice(0,10)
 }
