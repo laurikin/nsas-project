@@ -4,10 +4,16 @@ import { SQS }  from 'aws-sdk'
 
 export const handler: Handler = async({ feedUrl }: { feedUrl: string }) => {
 
+    console.log('feedUrl', feedUrl)
+
     const QueueUrl = process.env.QUEUE ?? ''
 
     if (!QueueUrl) {
         throw new Error('queue url must be defined')
+    }
+
+    if (!feedUrl) {
+        throw new Error('feedUrl must be defined')
     }
 
     const sqs = new SQS()

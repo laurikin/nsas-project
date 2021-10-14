@@ -29,6 +29,7 @@ export class SearchEngineStack extends cdk.Stack {
         })
 
         const fetchUrls = new lambda.Function(this, 'fetch-urls-lambda', {
+            functionName: 'search-engine_add-feed',
             description: 'Fetch URLs from a given rss feed and push to queue',
             timeout: cdk.Duration.seconds(20),
             memorySize: 256,
