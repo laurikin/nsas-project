@@ -22,6 +22,14 @@ export class SearchEngineStack extends cdk.Stack {
             billingMode: dynamodb.BillingMode.PAY_PER_REQUEST
         });
 
+        const feedTable = new dynamodb.Table(this, 'feed-table', {
+            partitionKey: {
+                name: 'feedname',
+                type: dynamodb.AttributeType.STRING
+            },
+            billingMode: dynamodb.BillingMode.PAY_PER_REQUEST
+        });
+
         const pageBucket = new Bucket(this, 'page-bucket')
 
         const urlQueue = new Queue(this, 'url-queue', {
@@ -41,10 +49,12 @@ export class SearchEngineStack extends cdk.Stack {
             code: lambda.Code.fromAsset(join(__dirname, '../src')),
             handler: 'handlers/fetch-urls.handler',
             environment: {
+                TABLE: feedTable.tableName,
                 QUEUE: urlQueue.queueUrl
             }
         });
 
+        feedTable.grantReadData(fetchUrls)
         urlQueue.grantSendMessages(fetchUrls)
 
         const fetchPage = new lambda.Function(this, 'fetch-page-lambda', {
@@ -55,7 +65,8 @@ export class SearchEngineStack extends cdk.Stack {
             code: lambda.Code.fromAsset(join(__dirname, '../src')),
             handler: 'handlers/fetch-page.handler',
             environment: {
-                BUCKET: pageBucket.bucketName
+                BUCKET: pageBucket.bucketName,
+                QUEUE: filenameQueue.queueUrl
             }
         });
 
@@ -74,7 +85,8 @@ export class SearchEngineStack extends cdk.Stack {
             code: lambda.Code.fromAsset(join(__dirname, '../src')),
             handler: 'handlers/create-index.handler',
             environment: {
-                TABLE: indexTable.tableName
+                TABLE: indexTable.tableName,
+                QUEUE: filenameQueue.queueUrl
             }
         });
 
