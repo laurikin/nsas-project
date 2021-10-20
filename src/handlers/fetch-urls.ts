@@ -18,10 +18,6 @@ export const handler: Handler = async() => {
         throw new Error('queue url must be defined')
     }
 
-    // if (!feedUrl) {
-    //     throw new Error('feedUrl must be defined')
-    // }
-
     const sqs = new SQS()
     
     const parser = new Parser();
@@ -32,8 +28,10 @@ export const handler: Handler = async() => {
 
     const feedUrls = feedTableRecords?.Items
         ?.map(item =>
-            item.feedname.S
+            item.feedUrl.S
         )
+
+    console.log('feeds', feedUrls)
 
     if (!feedUrls) {
         console.log('No feed found')

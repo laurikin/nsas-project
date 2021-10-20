@@ -30,7 +30,7 @@ lambda.invoke({
             if (results) {
                 const feeds: any[] = JSON.parse(results)
                 feeds.forEach((feed) => {
-                    const s = `${feed.doc}    ${feed.score}`
+                    const s = feed.doc
                     console.log(s)
                 })
             }

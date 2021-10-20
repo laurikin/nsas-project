@@ -7,8 +7,7 @@ const app = new cdk.App();
 
 new SearchEngineStack(app, 'search-engine', {
     env: {
-        region: 'eu-west-1',
-        account: '979823966345'
+        region: 'eu-west-1'
     }
 });
 

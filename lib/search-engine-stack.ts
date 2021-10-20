@@ -4,13 +4,16 @@ import * as dynamodb from '@aws-cdk/aws-dynamodb'
 import { Bucket } from '@aws-cdk/aws-s3'
 import { Queue } from '@aws-cdk/aws-sqs'
 import { join } from 'path'
-import * as eventsources from '@aws-cdk/aws-lambda-event-sources';
+import * as eventsources from '@aws-cdk/aws-lambda-event-sources'
+import events = require('@aws-cdk/aws-events')
+import eventTargets = require('@aws-cdk/aws-events-targets')
+import { ManagedPolicy, PolicyDocument, PolicyStatement } from '@aws-cdk/aws-iam'
 
 export class SearchEngineStack extends cdk.Stack {
     constructor(scope: cdk.Construct, id: string, props: cdk.StackProps) {
         super(scope, id, props);
 
-        const indexTable = new dynamodb.Table(this, 'search-index-table', {
+        const indexTable = new dynamodb.Table(this, 'index-table', {
             partitionKey: {
                 name: 'keyword',
                 type: dynamodb.AttributeType.STRING
@@ -41,7 +44,6 @@ export class SearchEngineStack extends cdk.Stack {
         })
 
         const fetchUrls = new lambda.Function(this, 'fetch-urls-lambda', {
-            functionName: 'search-engine_add-feed',
             description: 'Fetch URLs from a given rss feed and push to queue',
             timeout: cdk.Duration.seconds(20),
             memorySize: 256,
@@ -57,6 +59,13 @@ export class SearchEngineStack extends cdk.Stack {
         feedTable.grantReadData(fetchUrls)
         urlQueue.grantSendMessages(fetchUrls)
 
+        // schedule fetch-urls to run once per day
+        new events.Rule(this, 'schedule-rule', {
+            description: 'Schedule rule to fetch update the search index',
+            targets: [new eventTargets.LambdaFunction(fetchUrls)],
+            schedule: events.Schedule.rate(cdk.Duration.days(1))
+        });
+
         const fetchPage = new lambda.Function(this, 'fetch-page-lambda', {
             description: 'Fetches a page from a given url and stores its text content in s3',
             timeout: cdk.Duration.minutes(5),
@@ -71,7 +80,9 @@ export class SearchEngineStack extends cdk.Stack {
         });
 
         // sqs subscription to the lambda
-        fetchPage.addEventSource(new eventsources.SqsEventSource(urlQueue));
+        fetchPage.addEventSource(new eventsources.SqsEventSource(urlQueue, {
+            batchSize: 10
+        }));
 
         filenameQueue.grantSendMessages(fetchPage)
         urlQueue.grantConsumeMessages(fetchPage)
@@ -95,12 +106,14 @@ export class SearchEngineStack extends cdk.Stack {
         indexTable.grantReadWriteData(createIndex)
 
         // sqs subscription to the lambda
-        createIndex.addEventSource(new eventsources.SqsEventSource(filenameQueue));
+        createIndex.addEventSource(new eventsources.SqsEventSource(filenameQueue, {
+            batchSize: 10
+        }));
 
         const search = new lambda.Function(this, 'search', {
             functionName: 'search-engine_search',
             description: 'Search the database for keywords and return ranked rersults',
-            timeout: cdk.Duration.seconds(5),
+            timeout: cdk.Duration.seconds(10),
             memorySize: 256,
             runtime: lambda.Runtime.NODEJS_14_X,
             code: lambda.Code.fromAsset(join(__dirname, '../src')),
@@ -111,5 +124,40 @@ export class SearchEngineStack extends cdk.Stack {
         });
 
         indexTable.grantReadData(search)
+
+        const addFeed = new lambda.Function(this, 'add-feed', {
+            functionName: 'search-engine_add-feed',
+            description: 'Add given feed url to the feed table for later processing',
+            timeout: cdk.Duration.seconds(10),
+            memorySize: 256,
+            runtime: lambda.Runtime.NODEJS_14_X,
+            code: lambda.Code.fromAsset(join(__dirname, '../src')),
+            handler: 'handlers/add-feed.handler',
+            environment: {
+                TABLE: feedTable.tableName
+            }
+        });
+
+        feedTable.grantWriteData(addFeed)
+
+        // create a policies that can be attached to the client role
+        new ManagedPolicy(this, 'client-policy', {
+            managedPolicyName: 'search-engine_client-policy',
+            document: new PolicyDocument({
+                assignSids: true,
+                statements: [
+                    new PolicyStatement({
+                        actions: [
+                            'lambda:InvokeFunction'
+                        ],
+                        resources: [
+                            search.functionArn,
+                            addFeed.functionArn
+                        ]
+                    })
+                ]
+            })
+        })
+
     }
 }

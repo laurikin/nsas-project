@@ -1,31 +1,28 @@
 {
     "name": "search-engine",
     "version": "0.1.0",
-    "license": "MIT",
+    "license": "Apache License 2.0",
     "bin": {
-        "search-engine": "bin/search-engine.js",
-        "add-feed": "bin/add-feed.js",
-        "search": "bin/search.js"
+        "search-engine": "bin/search-engine.js"
     },
     "scripts": {
         "build": "tsc",
         "watch": "tsc -w",
         "cdk": "cdk",
-        "test": "mocha -r ts-node/register src/**/*.spec.ts"
+        "test": "mocha -r ts-node/register src/**/*.spec.ts",
+        "add-feed": "ts-node bin/add-feed.js",
+        "search": "ts-node bin/search.js"
     },
     "devDependencies": {
         "@aws-cdk/aws-apigateway": "1.125.0",
         "@aws-cdk/aws-dynamodb": "1.125.0",
-        "@aws-cdk/aws-ec2": "1.125.0",
         "@aws-cdk/aws-iam": "1.125.0",
         "@aws-cdk/aws-lambda": "1.125.0",
         "@aws-cdk/aws-lambda-event-sources": "1.125.0",
-        "@aws-cdk/aws-rds": "1.125.0",
-        "@aws-cdk/aws-route53": "1.125.0",
-        "@aws-cdk/aws-route53-targets": "1.125.0",
         "@aws-cdk/aws-s3": "1.125.0",
         "@aws-cdk/aws-sqs": "1.125.0",
-        "@aws-cdk/aws-ec2": "1.125.0",
+        "@aws-cdk/aws-events": "1.125.0",
+        "@aws-cdk/aws-events-targets": "1.125.0",
         "@aws-cdk/core": "1.125.0",
         "@types/aws-lambda": "^8.10.27",
         "@types/node": "14.14.44",
