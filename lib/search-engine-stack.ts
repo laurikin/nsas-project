@@ -1,13 +1,13 @@
 import cdk = require('@aws-cdk/core')
 import lambda = require('@aws-cdk/aws-lambda')
 import * as dynamodb from '@aws-cdk/aws-dynamodb'
-import { Bucket, EventType } from '@aws-cdk/aws-s3'
+import { Bucket } from '@aws-cdk/aws-s3'
 import { Queue } from '@aws-cdk/aws-sqs'
 import { join } from 'path'
 import * as eventsources from '@aws-cdk/aws-lambda-event-sources';
 
 export class SearchEngineStack extends cdk.Stack {
-    constructor(scope: cdk.Construct, id: string, props) {
+    constructor(scope: cdk.Construct, id: string, props: cdk.StackProps) {
         super(scope, id, props);
 
         const indexTable = new dynamodb.Table(this, 'search-index-table', {
@@ -25,6 +25,10 @@ export class SearchEngineStack extends cdk.Stack {
         const pageBucket = new Bucket(this, 'page-bucket')
 
         const urlQueue = new Queue(this, 'url-queue', {
+            visibilityTimeout: cdk.Duration.minutes(5)
+        })
+
+        const filenameQueue = new Queue(this, 'filename-queue', {
             visibilityTimeout: cdk.Duration.minutes(5)
         })
 
@@ -58,6 +62,7 @@ export class SearchEngineStack extends cdk.Stack {
         // sqs subscription to the lambda
         fetchPage.addEventSource(new eventsources.SqsEventSource(urlQueue));
 
+        filenameQueue.grantSendMessages(fetchPage)
         urlQueue.grantConsumeMessages(fetchPage)
         pageBucket.grantWrite(fetchPage)
 
@@ -72,14 +77,13 @@ export class SearchEngineStack extends cdk.Stack {
                 TABLE: indexTable.tableName
             }
         });
+
+        filenameQueue.grantConsumeMessages(createIndex)
         pageBucket.grantRead(createIndex)
         indexTable.grantReadWriteData(createIndex)
 
-        createIndex.addEventSource(new eventsources.S3EventSource(pageBucket, {
-            events: [
-                EventType.OBJECT_CREATED,
-            ]
-        }))
+        // sqs subscription to the lambda
+        createIndex.addEventSource(new eventsources.SqsEventSource(filenameQueue));
 
         const search = new lambda.Function(this, 'search', {
             functionName: 'search-engine_search',
